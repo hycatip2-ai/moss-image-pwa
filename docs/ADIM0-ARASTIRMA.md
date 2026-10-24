@@ -79,3 +79,19 @@ Gist'e sadece URL ve durum yazılır; APP_TOKEN asla yazılmaz.
 
 Kaynaklar: HF API (model/Space dosyaları), `hugging-apps/moss-image-8-step-dmd/app.py`,
 `lodestones/MOSS-Image-SFT-8-steps-dmd/README.md`, `Kaggle/kaggle-api/docs/kernels_metadata.md`.
+
+## 6. 1. deney sonucu (2026-10-24, Kaggle T4 ×2) — BAŞARILI
+Ayarlar: `lora_latest` güç 0.7, metin kodlayıcı bitsandbytes int8 (cuda:1), transformer fp16 + `FP32_MODULES` fp32,
+1024², 8 adım, seed 42. Torch 2.11 / CUDA 12.8 / Python 3.13.
+
+| Ölçüm | Değer |
+|---|---|
+| pip + indirme (28.4 GB, HF_TOKEN'sız) | 24 sn + 130 sn (~0.22 GB/sn) |
+| Yükleme: transformer / VAE / kodlayıcı | 69 / 1 / 71 sn |
+| Görsel başına (ısınmış) | **~32 sn** (kodlama 0.5, 8 adım × ~3.8 sn, VAE 1.4) |
+| VRAM tepe | cuda:0 14.1 GB / 15 GB, cuda:1 9.5 GB |
+| NaN/Inf, siyah görsel | yok (piksel std 0.44); kodlayıcı çıktı abs_max 49.75 |
+| Oturum başlangıcından ilk görsele | ~7 dk |
+
+Sonuçlar: indirme hızlı olduğu için Kaggle Dataset'e gerek yok (şimdilik). Görsel süresi Cloudflare zaman aşımının
+altında ama cuda:0 sınırda — büyük çözünürlükler için servis yine asenkron olacak. `/kaggle/tmp` ~1.1 TB boş.

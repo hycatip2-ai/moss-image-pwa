@@ -5,8 +5,8 @@ sadece sahibinin erişebildiği bir PWA'dan görsel üretmek. Kullanıcı ile T�
 
 ## Durum ve kaynaklar
 - Araştırma ve onaylı plan: `docs/ADIM0-ARASTIRMA.md`. Kararları oradan al, yeniden tartışma.
-- Şu anki adım: **1. deney** (`kaggle/deney/deney.py`) — tek 1024² görsel, süre/VRAM/NaN raporu.
-  Sonra: servis notebook'u (FastAPI + cloudflared + gizli Gist), `start.sh`/`status.sh`, PWA, README.
+- 1. deney tamamlandı (sonuçlar araştırma belgesi §6). Şu anki adım: **servis notebook'u**.
+  Kalan: servis notebook'u (FastAPI + cloudflared + gizli Gist), `start.sh`/`status.sh`, PWA, README.
 
 ## Kurallar
 - Model tamamen PyTorch; ComfyUI kullanma (gerekçesi araştırma belgesinde).

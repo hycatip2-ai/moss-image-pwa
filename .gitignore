@@ -1,13 +1,4 @@
-# Kaggle kimlik bilgileri asla commit edilmez
-kaggle.json
-access_token
-.kaggle/
-.env
-*.env
-
-# Yerel çıktılar
 out/
 __pycache__/
-*.pyc
-.venv/
-venv/
+kaggle.json
+.env
