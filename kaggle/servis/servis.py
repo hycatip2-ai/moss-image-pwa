@@ -180,7 +180,8 @@ class Engine:
         self.transformer, info = timed("load_transformer", load_transformer_cache,
                                        os.path.join(tr_dir, "transformer"), MOSSImageTransformer, self.dev0,
                                        os.path.join(tr_dir, LORA_FILES["latest"][0]), self.LoRALinear)
-        REPORT["transformer"] = info
+        REPORT["transformer"] = {**info, "dtypes": sorted({str(t.dtype) for t in
+                                                            (*self.transformer.parameters(), *self.transformer.buffers())})}
         self.lora_variant = "latest"
         # İkinci LoRA CPU'da bekler; seçilince GPU tamponlarına kopyalanır (VRAM'de yer yok).
         self.lora_cpu = {}
