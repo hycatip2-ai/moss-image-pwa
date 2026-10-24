@@ -1,0 +1,14 @@
+{
+  "id": "__USERNAME__/moss-hazirlik-tr",
+  "title": "moss-hazirlik-tr",
+  "code_file": "hazirlik_tr.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

@@ -1,0 +1,25 @@
+# PWA'daki "Başlat" düğmesi bunu tetikler (workflow_dispatch). Servis notebook'unu Kaggle'a gönderip çalıştırır.
+# Repo secret'ları: KAGGLE_USERNAME, KAGGLE_API_TOKEN.
+name: Kaggle servisini başlat
+on:
+  workflow_dispatch:
+concurrency:
+  group: kaggle-servis
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "kaggle>=1.8"
+      - name: Servis notebook'unu gönder
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: scripts/kaggle_push.sh kaggle/servis
