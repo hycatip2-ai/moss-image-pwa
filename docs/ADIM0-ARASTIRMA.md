@@ -95,3 +95,12 @@ Ayarlar: `lora_latest` güç 0.7, metin kodlayıcı bitsandbytes int8 (cuda:1), 
 
 Sonuçlar: indirme hızlı olduğu için Kaggle Dataset'e gerek yok (şimdilik). Görsel süresi Cloudflare zaman aşımının
 altında ama cuda:0 sınırda — büyük çözünürlükler için servis yine asenkron olacak. `/kaggle/tmp` ~1.1 TB boş.
+
+## 7. Önbellek + servis self-test (2026-10-24) — BAŞARILI
+- Ağırlıklar Kaggle Dataset yerine **hazırlık notebook çıktıları** olarak saklanıyor (Kaggle anahtarı notebook'a
+  girmesin diye): `moss-hazirlik-tr` 13.44 GB (transformer fp16+fp32, VAE, iki LoRA), `moss-hazirlik-te` 9.44 GB
+  (bnb int8 kodlayıcı; geri yükleme farkı 0.0). Servis `kernel_sources` ile `/kaggle/input/notebooks/...` altına bağlıyor.
+- Transformer artık bf16'dan **doğrudan** karışık hassasiyete çevriliyor (fp32 modüller bf16→fp16 kaybı yaşamıyor).
+- Servis (secret'sız self-test, tünel üzerinden): pip 20 sn, tünel 4 sn, yükleme 164 sn → **hazır: 193 sn** (indirme yok).
+  1024²×8 adım 34.9 sn; 832×1216×4 adım (LoRA v1) 17.6 sn. VRAM tepe cuda:0 14.1 GB, cuda:1 9.5 GB.
+  Yetkisiz istek 401, hatalı istek 400.
