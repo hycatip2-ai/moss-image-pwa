@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <title>MOSS Görsel</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>MOSS Görsel</h1>
+    <button id="btn-settings" class="icon-btn" aria-label="Ayarlar" title="Ayarlar">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6ZM13 15.5A3.5 3.5 0 1 1 13 8.5a3.5 3.5 0 0 1 0 7Z" transform="translate(-1 0)"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="card status" id="status-card" aria-live="polite">
+      <div class="status-row">
+        <span class="dot" id="status-dot"></span>
+        <div class="status-text">
+          <strong id="status-title">Durum alınıyor…</strong>
+          <small id="status-detail"></small>
+        </div>
+      </div>
+      <div class="status-actions">
+        <button id="btn-start" class="btn primary" hidden>Başlat</button>
+        <button id="btn-stop" class="btn ghost" hidden>Durdur</button>
+      </div>
+    </section>
+
+    <section class="card" id="setup-card" hidden>
+      <p>Kullanmaya başlamak için <b>Ayarlar</b>'dan GitHub token'ı, Gist ID'yi ve uygulama anahtarını gir.</p>
+      <button class="btn primary" id="btn-open-settings">Ayarları aç</button>
+    </section>
+
+    <form class="card" id="gen-form" autocomplete="off">
+      <label for="prompt" class="lbl">Prompt</label>
+      <textarea id="prompt" rows="4" maxlength="4000" required
+        placeholder="Ör: Yağmurlu bir gecede İstanbul'da küçük bir bakkal, sinematik fotoğraf"></textarea>
+
+      <div class="lbl">Boyut</div>
+      <div class="chips" id="sizes" role="radiogroup" aria-label="Boyut"></div>
+
+      <details class="advanced">
+        <summary>Gelişmiş</summary>
+        <div class="grid2">
+          <label>Adım: <output id="steps-out">8</output>
+            <input type="range" id="steps" min="1" max="8" value="8">
+          </label>
+          <label>LoRA gücü: <output id="strength-out">0.70</output>
+            <input type="range" id="strength" min="0" max="1.5" step="0.05" value="0.7">
+          </label>
+          <label>LoRA sürümü
+            <select id="lora">
+              <option value="latest">latest (önerilen, 0.7)</option>
+              <option value="v1">v1 (1.0)</option>
+            </select>
+          </label>
+          <label>Seed (-1 = rastgele)
+            <input type="number" id="seed" value="-1" min="-1" step="1" inputmode="numeric">
+          </label>
+        </div>
+      </details>
+
+      <button type="submit" class="btn primary wide" id="btn-generate" disabled>Üret</button>
+
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><span id="progress-bar"></span></div>
+        <small id="progress-text"></small>
+      </div>
+    </form>
+
+    <section class="card" id="last-card" hidden>
+      <img id="last-img" alt="Son üretilen görsel">
+      <div class="row-actions" id="last-actions"></div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Galeri</h2>
+        <small id="gallery-count"></small>
+      </div>
+      <div class="gallery" id="gallery"></div>
+      <p class="muted center" id="gallery-empty">Henüz görsel yok.</p>
+    </section>
+  </main>
+
+  <dialog id="settings-dlg">
+    <form method="dialog" id="settings-form">
+      <h2>Ayarlar</h2>
+      <label>GitHub token
+        <input type="password" id="set-gh" autocomplete="off" spellcheck="false"
+          placeholder="github_pat_…">
+        <small>Fine-grained: bu repoda <b>Actions: Read and write</b>, hesapta <b>Gists: Read and write</b>.</small>
+      </label>
+      <label>Gist ID
+        <input type="text" id="set-gist" autocomplete="off" spellcheck="false" placeholder="32 haneli kimlik">
+      </label>
+      <label>Uygulama anahtarı (APP_TOKEN)
+        <input type="password" id="set-app" autocomplete="off" spellcheck="false">
+      </label>
+      <label>Repo
+        <input type="text" id="set-repo" autocomplete="off" spellcheck="false" placeholder="kullanici/repo">
+      </label>
+      <p class="muted small">Bilgiler sadece bu cihazda saklanır.</p>
+      <div class="row-actions">
+        <button value="cancel" class="btn ghost" formnovalidate>Vazgeç</button>
+        <button value="save" class="btn primary" id="settings-save">Kaydet</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="viewer-dlg" class="viewer">
+    <img id="viewer-img" alt="">
+    <p id="viewer-meta" class="small"></p>
+    <div class="row-actions" id="viewer-actions"></div>
+  </dialog>
+
+  <div id="toast" role="status" hidden></div>
+  <script src="app.js" type="module"></script>
+</body>
+</html>

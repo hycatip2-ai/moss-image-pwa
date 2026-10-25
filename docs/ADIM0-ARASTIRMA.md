@@ -79,3 +79,28 @@ Gist'e sadece URL ve durum yazılır; APP_TOKEN asla yazılmaz.
 
 Kaynaklar: HF API (model/Space dosyaları), `hugging-apps/moss-image-8-step-dmd/app.py`,
 `lodestones/MOSS-Image-SFT-8-steps-dmd/README.md`, `Kaggle/kaggle-api/docs/kernels_metadata.md`.
+
+## 6. 1. deney sonucu (2026-10-24, Kaggle T4 ×2) — BAŞARILI
+Ayarlar: `lora_latest` güç 0.7, metin kodlayıcı bitsandbytes int8 (cuda:1), transformer fp16 + `FP32_MODULES` fp32,
+1024², 8 adım, seed 42. Torch 2.11 / CUDA 12.8 / Python 3.13.
+
+| Ölçüm | Değer |
+|---|---|
+| pip + indirme (28.4 GB, HF_TOKEN'sız) | 24 sn + 130 sn (~0.22 GB/sn) |
+| Yükleme: transformer / VAE / kodlayıcı | 69 / 1 / 71 sn |
+| Görsel başına (ısınmış) | **~32 sn** (kodlama 0.5, 8 adım × ~3.8 sn, VAE 1.4) |
+| VRAM tepe | cuda:0 14.1 GB / 15 GB, cuda:1 9.5 GB |
+| NaN/Inf, siyah görsel | yok (piksel std 0.44); kodlayıcı çıktı abs_max 49.75 |
+| Oturum başlangıcından ilk görsele | ~7 dk |
+
+Sonuçlar: indirme hızlı olduğu için Kaggle Dataset'e gerek yok (şimdilik). Görsel süresi Cloudflare zaman aşımının
+altında ama cuda:0 sınırda — büyük çözünürlükler için servis yine asenkron olacak. `/kaggle/tmp` ~1.1 TB boş.
+
+## 7. Önbellek + servis self-test (2026-10-24) — BAŞARILI
+- Ağırlıklar Kaggle Dataset yerine **hazırlık notebook çıktıları** olarak saklanıyor (Kaggle anahtarı notebook'a
+  girmesin diye): `moss-hazirlik-tr` 13.44 GB (transformer fp16+fp32, VAE, iki LoRA), `moss-hazirlik-te` 9.44 GB
+  (bnb int8 kodlayıcı; geri yükleme farkı 0.0). Servis `kernel_sources` ile `/kaggle/input/notebooks/...` altına bağlıyor.
+- Transformer artık bf16'dan **doğrudan** karışık hassasiyete çevriliyor (fp32 modüller bf16→fp16 kaybı yaşamıyor).
+- Servis (secret'sız self-test, tünel üzerinden): pip 20 sn, tünel 4 sn, yükleme 164 sn → **hazır: 193 sn** (indirme yok).
+  1024²×8 adım 34.9 sn; 832×1216×4 adım (LoRA v1) 17.6 sn. VRAM tepe cuda:0 14.1 GB, cuda:1 9.5 GB.
+  Yetkisiz istek 401, hatalı istek 400.

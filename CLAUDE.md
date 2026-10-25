@@ -5,17 +5,17 @@ sadece sahibinin erişebildiği bir PWA'dan görsel üretmek. Kullanıcı ile T�
 
 ## Durum ve kaynaklar
 - Araştırma ve onaylı plan: `docs/ADIM0-ARASTIRMA.md`. Kararları oradan al, yeniden tartışma.
-- Şu anki adım: **1. deney** (`kaggle/deney/deney.py`) — tek 1024² görsel, süre/VRAM/NaN raporu.
-  Sonra: servis notebook'u (FastAPI + cloudflared + gizli Gist), `start.sh`/`status.sh`, PWA, README.
+- Deney, önbellek ve servis self-test'i tamamlandı (araştırma belgesi §6–7). Kalan: kullanıcı kurulumu ve canlı uçtan uca test.
+  Yapı: `kaggle/ortak` (ortak kod), `kaggle/hazirlik_*`, `kaggle/servis`, `pwa/`, `.github/workflows`; testler `tests/`.
 
 ## Kurallar
 - Model tamamen PyTorch; ComfyUI kullanma (gerekçesi araştırma belgesinde).
 - T4'te bf16 yok: transformer fp16, `FP32_MODULES` fp32, LoRA birleştirilmeden (`LoRALinear`).
 - Ağırlıklar `/kaggle/working`'e değil, en boş disk alanına (`pick_work_dir`).
 - Kimlik bilgileri (`KAGGLE_API_TOKEN`, `kaggle.json`, token'lar) asla commit edilmez, sohbete yazdırılmaz.
-- Kaggle'a göndermeden önce `deney.py` yardımcılarını CPU'da küçük rastgele modellerle test et
+- Kaggle'a göndermeden önce `tests/` altındaki CPU testlerini çalıştır; yeni yardımcıları CPU'da küçük rastgele modellerle test et
   (her Kaggle çalıştırması ~28 GB indirir ve GPU kotası harcar).
 
 ## Çalıştırma
 - `pip install "kaggle>=1.8"`; ortamda `KAGGLE_USERNAME` ve `KAGGLE_API_TOKEN` olmalı.
-- `scripts/deney_calistir.sh` → Kaggle'a gönderir, bekler, `out/deney/<zaman>/` altına rapor ve PNG indirir.
+- `scripts/kaggle_push.sh kaggle/<ad> [--wait]` → derler (moss_ortak'ı gömer), gönderir, `out/<ad>/<zaman>/` altına rapor ve PNG indirir.
