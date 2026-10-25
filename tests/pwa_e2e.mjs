@@ -84,14 +84,22 @@ assert(await page.locator("#btn-stop").isVisible(), "Durdur görünmeli");
 // 6) üret
 await page.fill("#prompt", "Kapadokya'da gün doğumu, balonlar");
 await page.locator("#sizes .chip", { hasText: "Dikey 2:3" }).click();
+await page.locator("#qualities .chip", { hasText: "Hızlı" }).click();
+assert((await page.inputValue("#steps")) === "4", "Hızlı = 4 adım");
+await page.locator("#counts .chip", { hasText: "2" }).click();
+assert((await text("btn-generate")) === "2 görsel üret", "buton adedi göstermeli");
 await page.click(".advanced summary");
+await page.fill("#steps", "8");
+await page.locator("#steps").dispatchEvent("input");
+assert((await page.locator("#qualities .chip[aria-checked=true]").innerText()).startsWith("En iyi"), "8 adım = En iyi");
 await page.fill("#seed", "1234");
 await page.click("#btn-generate");
-await page.waitForFunction(() => /Adım \d\/8/.test(document.getElementById("progress-text").textContent), null, { timeout: 10000 });
+await page.waitForFunction(() => /Görsel 1\/2 · Adım \d\/8/.test(document.getElementById("progress-text").textContent), null, { timeout: 10000 });
 await page.screenshot({ path: `${SHOTS}/3-uretiliyor.png`, fullPage: true });
-await page.waitForSelector("#gallery img", { timeout: 20000 });
+await page.waitForFunction(() => /Görsel 2\/2/.test(document.getElementById("progress-text").textContent), null, { timeout: 20000 });
+await page.waitForFunction(() => document.getElementById("gallery-count").textContent === "2 görsel", null, { timeout: 20000 });
+await page.waitForSelector("#progress[hidden]", { state: "attached", timeout: 10000 });
 assert(await page.locator("#last-card").isVisible(), "son görsel kartı görünmeli");
-assert((await text("gallery-count")) === "1 görsel", "galeride 1 görsel olmalı");
 const dims = await page.locator("#last-img").evaluate((i) => [i.naturalWidth, i.naturalHeight]);
 assert(dims[0] === 208 && dims[1] === 304, "görsel boyutu 832x1216/4 olmalı: " + dims);
 await page.screenshot({ path: `${SHOTS}/4-sonuc.png`, fullPage: true });
@@ -105,9 +113,10 @@ assert((await page.locator("#sizes .chip[aria-checked=true]").innerText()) === "
 // 8) görüntüleyici: ayarları kullan + sil
 await page.fill("#prompt", "başka");
 await page.click("#gallery button");
-assert((await text("viewer-meta")).includes("seed 1234"), "meta seed göstermeli");
+assert((await text("viewer-meta")).includes("seed 1235"), "en yeni görsel ikinci seed'i (1235) taşımalı: " + await text("viewer-meta"));
 await page.locator("#viewer-actions button", { hasText: "Ayarları kullan" }).click();
-assert((await page.inputValue("#prompt")).startsWith("Kapadokya") && (await page.inputValue("#seed")) === "1234", "ayarlar geri yüklenmeli");
+assert((await page.inputValue("#prompt")).startsWith("Kapadokya") && (await page.inputValue("#seed")) === "1235", "ayarlar geri yüklenmeli");
+assert((await page.locator("#counts .chip[aria-checked=true]").innerText()) === "2", "adet hatırlanmalı");
 
 // 9) yatay taşma yok
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -128,9 +137,12 @@ await waitTitle("Hazır");
 await page.click("#btn-stop");
 await page.waitForTimeout(500);
 
-// 12) sil
-await page.click("#gallery button");
-await page.locator("#viewer-actions button", { hasText: "Sil" }).click();
+// 12) sil (iki görsel)
+for (let i = 0; i < 2; i++) {
+  await page.click("#gallery button");
+  await page.locator("#viewer-actions button", { hasText: "Sil" }).click();
+  await page.waitForTimeout(300);
+}
 await page.waitForSelector("#gallery-empty:not([hidden])");
 
 // 13) eski nabız = kapalı
