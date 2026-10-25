@@ -1,5 +1,5 @@
 # PWA'daki "Başlat" düğmesi bunu tetikler (workflow_dispatch). Servis notebook'unu Kaggle'a gönderip çalıştırır.
-# Repo secret'ı: KAGGLE_API_TOKEN (KAGGLE_USERNAME isteğe bağlı).
+# Repo secret'ları: KAGGLE_API_TOKEN, APP_TOKEN, GH_TOKEN, GIST_ID (KAGGLE_USERNAME isteğe bağlı).
 name: Kaggle servisini başlat
 on:
   workflow_dispatch:
@@ -23,4 +23,8 @@ jobs:
           # Kullanıcı adı gizli değil; secret/değişken yoksa varsayılan kullanılır.
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME || vars.KAGGLE_USERNAME || 'hsnyld' }}
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+          # Kaggle Secrets API ile gönderilen notebook'a ulaşmıyor; değerler derlemede gömülür.
+          MOSS_APP_TOKEN: ${{ secrets.APP_TOKEN }}
+          MOSS_GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          MOSS_GIST_ID: ${{ secrets.GIST_ID }}
         run: scripts/kaggle_push.sh kaggle/servis
