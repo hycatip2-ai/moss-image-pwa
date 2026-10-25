@@ -72,7 +72,12 @@ def get_secrets():
         pass
     for key in ("APP_TOKEN", "GH_TOKEN", "GIST_ID"):  # yerel test için
         out.setdefault(key, os.environ.get(key))
-    return {k: v for k, v in out.items() if v}
+    out = {k: v.strip() for k, v in out.items() if v and v.strip()}
+    if "GIST_ID" in out:  # tam Gist adresi de olabilir: https://gist.github.com/<kullanıcı>/<id>
+        ids = re.findall(r"[0-9a-fA-F]{20,}", out["GIST_ID"])
+        if ids:
+            out["GIST_ID"] = ids[-1].lower()
+    return out
 
 
 class Gist:

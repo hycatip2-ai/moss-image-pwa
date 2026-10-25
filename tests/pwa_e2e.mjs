@@ -51,7 +51,7 @@ assert(await page.locator("#btn-generate").isDisabled(), "üret kapalı olmalı"
 // 2) ayarlar
 await page.click("#btn-open-settings");
 await page.fill("#set-gh", "gh-test");
-await page.fill("#set-gist", `https://gist.github.com/kullanici/${GIST}`);  // URL yapıştırılırsa ID'ye çevrilmeli
+await page.fill("#set-gist", ` https://gist.github.com/kullanici/${GIST.toUpperCase()}/edit#file-moss-status-json`);  // URL yapıştırılırsa ID'ye çevrilmeli
 await page.fill("#set-app", "test-anahtar");
 await page.fill("#set-repo", "kullanici/moss-image-pwa");
 gistStatus = { phase: "stopped", detail: "20 dk boşta", url: null, updated_at: now() - 900, started_at: now() - 4000 };

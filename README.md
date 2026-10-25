@@ -23,12 +23,12 @@ PWA (GitHub Pages) ──"Başlat"──> GitHub Actions ──kaggle kernels pu
    *Generate new token*. Repository access: *Only select repositories* → bu repo.
    Repository permissions → **Actions: Read and write**. Account permissions → **Gists: Read and write**.
 3. **Gizli Gist**: gist.github.com → dosya adı `moss-status.json`, içerik `{}` → *Create secret gist*.
-   Adres çubuğundaki son kısım Gist ID'dir.
+   Gist ID olarak adresin tamamı ya da sondaki uzun kod girilebilir.
 4. **Uygulama anahtarı (APP_TOKEN)**: uzun rastgele bir metin (ör. parola yöneticisiyle 32+ karakter).
 5. **Kaggle Secrets**: kaggle.com/code → `moss-servis` notebook'u → *Edit* → Add-ons → Secrets →
    `APP_TOKEN`, `GH_TOKEN` (2. adımdaki token), `GIST_ID` ekle ve üçünü de bu notebook için aç.
-6. **GitHub repo secret'ları**: repo → Settings → Secrets and variables → Actions →
-   `KAGGLE_USERNAME`, `KAGGLE_API_TOKEN`.
+6. **GitHub repo secret'ı**: repo → Settings → Secrets and variables → Actions →
+   `KAGGLE_API_TOKEN` (kullanıcı adı workflow'da varsayılan: `hsnyld`; farklıysa `KAGGLE_USERNAME` ekle).
 7. **GitHub Pages**: repo → Settings → Pages → Source: **GitHub Actions**. Adres:
    `https://<kullanıcı>.github.io/moss-image-pwa/`
 8. PWA'yı aç → ⚙️ Ayarlar → token, Gist ID, APP_TOKEN gir → Kaydet. Telefonda "Ana ekrana ekle".

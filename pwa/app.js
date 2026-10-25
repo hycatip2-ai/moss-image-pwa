@@ -59,9 +59,21 @@ async function gh(path, opts = {}) {
   return fetch(`https://api.github.com${path}`, { ...opts, headers, cache: "no-store" });
 }
 
+// Gist ID'si tam adres olarak da yapıştırılabilir (https://gist.github.com/<kullanıcı>/<id>/...).
+function parseGistId(input) {
+  const ids = String(input || "").match(/[0-9a-f]{20,}/gi);
+  return ids ? ids[ids.length - 1].toLowerCase() : String(input || "").trim();
+}
+
 async function readGistStatus() {
-  const r = await gh(`/gists/${encodeURIComponent(settings.gist)}`);
-  if (r.status === 404) throw new Error("Gist bulunamadı (ID'yi kontrol et)");
+  const id = parseGistId(settings.gist);
+  const r = await gh(`/gists/${encodeURIComponent(id)}`);
+  if (r.status === 404) {
+    // Token'sız da dene: gizli Gist'ler ID ile herkese okunur; okunursa sorun token izninde.
+    const anon = await fetch(`https://api.github.com/gists/${encodeURIComponent(id)}`, { cache: "no-store" });
+    if (anon.ok) throw new Error("Token'da Gists izni yok (Account permissions → Gists: Read and write)");
+    throw new Error(`Gist bulunamadı: "${id.slice(0, 8)}…" (Ayarlar'daki Gist ID'yi kontrol et)`);
+  }
   if (r.status === 401) throw new Error("GitHub token geçersiz");
   if (!r.ok) throw new Error(`GitHub ${r.status}`);
   const file = (await r.json()).files?.[GIST_FILE];
@@ -417,7 +429,7 @@ function openSettings() {
 
 function saveSettings(ev) {
   if (ev.submitter?.value !== "save") return;
-  const gist = $("set-gist").value.trim().replace(/^https?:\/\/gist\.github\.com\/[^/]+\//, "").replace(/[/#?].*$/, "");
+  const gist = parseGistId($("set-gist").value);
   settings = { gh: $("set-gh").value.trim(), gist, app: $("set-app").value.trim(), repo: $("set-repo").value.trim() };
   store.set("moss.settings", settings);
   toast("Kaydedildi");

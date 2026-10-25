@@ -93,7 +93,9 @@ assert c.get("/api/jobs/yok", headers=H).status_code == 404
 # eski işler budanır
 for i in range(servis.KEEP_JOBS + 5):
     jobs.submit(servis.validate({"prompt": "b", "steps": 1, "width": 256, "height": 256}))
-time.sleep(1.5)
+deadline = time.time() + 30  # kuyruk boşalana kadar (yavaş makinede sabit bekleme yetmiyor)
+while (jobs.queue or jobs.busy) and time.time() < deadline:
+    time.sleep(0.05)
 jobs.submit(servis.validate({"prompt": "son", "steps": 1, "width": 256, "height": 256}))
 assert len(jobs.jobs) <= servis.KEEP_JOBS + 1, len(jobs.jobs)
 
