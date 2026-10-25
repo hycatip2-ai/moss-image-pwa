@@ -39,7 +39,9 @@ PWA (GitHub Pages) ──"Başlat"──> GitHub Actions ──kaggle kernels pu
 
 1. PWA'yı aç → **Başlat**.
 2. ~5 dk bekle (durum: Başlatılıyor → Kuruluyor → Model yükleniyor → **Hazır**).
-3. Prompt yaz → **Üret**. Bitince **Durdur** (ya da 20 dk sonra kendi kapanır).
+3. Prompt yaz, **Kalite** (Hızlı 4 / Dengeli 6 / En iyi 8 adım) ve **Adet** (1/2/4) seç → **Üret**.
+   GPU belleği tek görsellik olduğu için adetler sırayla üretilir (4 × ~35 sn).
+   Bitince **Durdur** (ya da 20 dk sonra kendi kapanır).
 
 Terminalden: `scripts/start.sh` (başlat), `GIST_ID=… scripts/status.sh` (durum).
 

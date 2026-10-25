@@ -13,6 +13,13 @@ const SIZES = [
   { label: "Yatay 16:9", w: 1344, h: 768 },
 ];
 const LORA_DEFAULT = { latest: 0.7, v1: 1.0 };
+// Kalite = adım sayısı (DMD LoRA her önekte eğitilmiş). Süreler T4'te 1024² için.
+const QUALITIES = [
+  { label: "Hızlı", steps: 4, hint: "~18 sn" },
+  { label: "Dengeli", steps: 6, hint: "~27 sn" },
+  { label: "En iyi", steps: 8, hint: "~35 sn" },
+];
+const COUNTS = [1, 2, 4];  // GPU belleği tek görsellik: adetler sırayla üretilir
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -24,7 +31,7 @@ const store = {
 let settings = Object.assign({ gh: "", gist: "", app: "", repo: defaultRepo() }, store.get("moss.settings", {}));
 let server = { phase: "unknown", url: null, ready: false };
 let pollTimer = null;
-let currentJob = null;
+let currentJob = null;  // { url, started, ids: [...], idx, ok, errors: [] }
 
 function defaultRepo() {
   // https://<kullanıcı>.github.io/<repo>/ adresinden tahmin
@@ -210,19 +217,36 @@ async function onStop() {
 // ------------------------------------------------------------ form
 let size = store.get("moss.size", 0);
 
-function renderSizes() {
-  const box = $("sizes");
-  box.replaceChildren(...SIZES.map((s, i) => {
+let count = COUNTS.includes(store.get("moss.count", 1)) ? store.get("moss.count", 1) : 1;
+
+function renderChips(boxId, items, isChecked, onPick) {
+  $(boxId).replaceChildren(...items.map((it) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "chip";
     b.setAttribute("role", "radio");
-    b.setAttribute("aria-checked", String(i === size));
-    b.textContent = `${s.label}`;
-    b.title = `${s.w}×${s.h}`;
-    b.onclick = () => { size = i; store.set("moss.size", i); renderSizes(); };
+    b.setAttribute("aria-checked", String(isChecked(it)));
+    b.textContent = it.label;
+    if (it.title) b.title = it.title;
+    b.onclick = () => onPick(it);
     return b;
   }));
+}
+
+function renderSizes() {
+  renderChips("sizes", SIZES.map((s, i) => ({ ...s, i, title: `${s.w}×${s.h}` })), (s) => s.i === size,
+    (s) => { size = s.i; store.set("moss.size", s.i); renderSizes(); });
+}
+
+function renderQualities() {
+  const steps = Number($("steps").value);
+  renderChips("qualities", QUALITIES.map((q) => ({ ...q, label: `${q.label} · ${q.hint}`, title: `${q.steps} adım` })),
+    (q) => q.steps === steps, (q) => { $("steps").value = q.steps; $("steps").dispatchEvent(new Event("input")); });
+}
+
+function renderCounts() {
+  renderChips("counts", COUNTS.map((n) => ({ n, label: String(n) })), (c) => c.n === count,
+    (c) => { count = c.n; store.set("moss.count", c.n); renderCounts(); updateGenerateButton(); });
 }
 
 function bindRange(id, outId, fmt) {
@@ -255,7 +279,8 @@ function applyParams(p) {
 
 function updateGenerateButton() {
   $("btn-generate").disabled = !server.ready || !!currentJob;
-  $("btn-generate").textContent = currentJob ? "Üretiliyor…" : server.ready ? "Üret" : "Servis kapalı";
+  $("btn-generate").textContent = currentJob ? "Üretiliyor…"
+    : !server.ready ? "Servis kapalı" : count > 1 ? `${count} görsel üret` : "Üret";
 }
 
 function showProgress(text, frac) {
@@ -269,58 +294,80 @@ async function onGenerate(ev) {
   const p = formParams();
   if (!p.prompt) return;
   store.set("moss.form", { ...p });
+  const batch = { url: server.url, started: Date.now(), ids: [], idx: 0, ok: 0, errors: [] };
   try {
-    const job = await (await api("/api/generate", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p),
-    })).json();
-    currentJob = { id: job.id, url: server.url, started: Date.now() };
-    store.set("moss.job", currentJob);
-    updateGenerateButton();
-    pollJob();
+    for (let i = 0; i < count; i++) {
+      // Sabit seed verilirse her görsel bir sonrakini alır; -1 ise sunucu her birine rastgele seçer.
+      const body = { ...p, seed: p.seed >= 0 ? p.seed + i : -1 };
+      const job = await (await api("/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      })).json();
+      batch.ids.push(job.id);
+    }
   } catch (e) {
     toast(e.message, true, 6000);
+    if (!batch.ids.length) return;
   }
+  currentJob = batch;
+  store.set("moss.job", currentJob);
+  updateGenerateButton();
+  pollJob();
 }
 
 async function pollJob() {
-  if (!currentJob) return;
-  const { id } = currentJob;
+  const batch = currentJob;
+  if (!batch) return;
+  const id = batch.ids[batch.idx];
+  const n = batch.ids.length;
+  const prefix = n > 1 ? `Görsel ${batch.idx + 1}/${n} · ` : "";
+  const elapsed = () => fmtDur((Date.now() - batch.started) / 1000);
+  const base = batch.idx / n;
   try {
-    if (server.url !== currentJob.url) throw new Error("Oturum değişti, iş kayboldu");
+    if (server.url !== batch.url) throw new Error("Oturum değişti, iş kayboldu");
     const job = await (await api(`/api/jobs/${id}`)).json();
-    const elapsed = fmtDur((Date.now() - currentJob.started) / 1000);
     if (job.status === "queued") {
-      showProgress(`Sırada (${job.position || 1}. sıra) · ${elapsed}`, 0);
+      showProgress(`${prefix}Sırada (${job.position || 1}. sıra) · ${elapsed()}`, base);
     } else if (job.status === "running") {
-      showProgress(`Adım ${job.step}/${job.steps} · ${elapsed}`, job.step / job.steps * 0.95);
-    } else if (job.status === "done") {
-      showProgress("Görsel alınıyor…", 1);
-      const blob = await (await api(`/api/jobs/${id}/image`, { timeout: 60000 })).blob();
-      const item = { id, blob, params: job.params, timings: job.timings, created: Date.now() };
-      await db.put(item);
-      showLast(item);
-      renderGallery();
-      return finishJob(`Hazır · ${job.timings?.total_s ?? "?"} sn`);
+      showProgress(`${prefix}Adım ${job.step}/${job.steps} · ${elapsed()}`, base + job.step / job.steps / n * 0.95);
     } else {
-      return finishJob(job.error || "Üretim başarısız", true);
+      if (job.status === "done") {
+        showProgress(`${prefix}Görsel alınıyor…`, (batch.idx + 1) / n);
+        const blob = await (await api(`/api/jobs/${id}/image`, { timeout: 60000 })).blob();
+        const item = { id, blob, params: job.params, timings: job.timings, created: Date.now() };
+        await db.put(item);
+        showLast(item);
+        renderGallery();
+        batch.ok++;
+      } else {
+        batch.errors.push(job.error || "Üretim başarısız");
+      }
+      batch.idx++;
+      store.set("moss.job", batch);
+      if (batch.idx >= n) return finishBatch();
     }
     setTimeout(pollJob, 1500);
   } catch (e) {
     if (e.message === "Servise ulaşılamadı" || e.message === "Servis yanıt vermedi") {
-      showProgress(`Bağlantı bekleniyor… (${e.message})`, 0);
+      showProgress(`${prefix}Bağlantı bekleniyor… (${e.message})`, base);
       setTimeout(pollJob, 4000);
       return;
     }
-    finishJob(e.message, true);
+    batch.errors.push(e.message);
+    batch.idx = n;
+    finishBatch();
   }
 }
 
-function finishJob(msg, isErr = false) {
+function finishBatch() {
+  const b = currentJob;
   currentJob = null;
   store.del("moss.job");
   $("progress").hidden = true;
   updateGenerateButton();
-  toast(msg, isErr, isErr ? 7000 : 3000);
+  const n = b.ids.length;
+  if (!b.errors.length) return toast(n > 1 ? `${n} görsel hazır · ${fmtDur((Date.now() - b.started) / 1000)}` : "Hazır", false, 3000);
+  const msg = b.ok ? `${b.ok}/${n} görsel hazır. Hata: ${b.errors[0]}` : b.errors[0];
+  toast(msg, true, 7000);
 }
 
 // ------------------------------------------------------------ galeri (IndexedDB)
@@ -440,6 +487,9 @@ function saveSettings(ev) {
 function init() {
   renderSizes();
   bindRange("steps", "steps-out", (v) => v);
+  $("steps").addEventListener("input", renderQualities);
+  renderQualities();
+  renderCounts();
   bindRange("strength", "strength-out", (v) => Number(v).toFixed(2));
   $("lora").addEventListener("change", () => {
     $("strength").value = LORA_DEFAULT[$("lora").value];
@@ -460,7 +510,7 @@ function init() {
   renderGallery();
   refreshStatus().then(() => {
     const job = store.get("moss.job", null);
-    if (job && job.url === server.url) { currentJob = job; updateGenerateButton(); pollJob(); }
+    if (job && Array.isArray(job.ids) && job.url === server.url) { currentJob = job; updateGenerateButton(); pollJob(); }
     else store.del("moss.job");
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

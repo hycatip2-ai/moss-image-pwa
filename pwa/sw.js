@@ -1,5 +1,5 @@
 // Uygulama kabuğunu önbelleğe alır (çevrimdışı açılış). API/GitHub isteklerine dokunmaz.
-const CACHE = "moss-v2";
+const CACHE = "moss-v3";
 const SHELL = ["./", "index.html", "style.css", "app.js", "manifest.webmanifest",
                "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png"];
 

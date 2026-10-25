@@ -166,6 +166,45 @@ class Tunnel:
             self.proc.terminate()
 
 
+# ---------------------------------------------------------------- önden okuma
+def prefetch(dirs, workers=8, chunk=256 << 20):
+    """Bağlı ağırlıkları paralel parçalar halinde okuyup sayfa önbelleğine alır.
+
+    /kaggle/input ağ üzerinden bağlı; tek akışla okuma oturumdan oturuma 1–6 dk sürdü. Paketler kurulurken
+    başlar; model yüklemesi aynı dosyaları sonra bellekten okur. Sıra: transformer, sonra kodlayıcı.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    t0 = time.time()
+    tasks = []
+    for d in dirs:
+        files = sorted((os.path.join(r, f) for r, _, fs in os.walk(d) for f in fs),
+                       key=lambda p: -os.path.getsize(p))
+        for path in files:
+            size = os.path.getsize(path)
+            tasks += [(path, off, min(chunk, size - off)) for off in range(0, size, chunk)]
+
+    def read(task):
+        path, off, length = task
+        fd = os.open(path, os.O_RDONLY)
+        try:
+            done = 0
+            while done < length:
+                n = len(os.pread(fd, min(16 << 20, length - done), off + done))
+                if n == 0:
+                    break
+                done += n
+            return done
+        finally:
+            os.close(fd)
+
+    with ThreadPoolExecutor(workers) as pool:
+        total = sum(pool.map(read, tasks))
+    sec = time.time() - t0
+    REPORT["prefetch"] = {"gb": round(total / 1e9, 2), "seconds": round(sec, 1),
+                          "gb_per_s": round(total / 1e9 / max(sec, 1e-3), 3)}
+    log(f"önden okuma: {REPORT['prefetch']}")
+
+
 # ---------------------------------------------------------------- model
 class Engine:
     def __init__(self):
@@ -543,6 +582,9 @@ def main():
         set_phase("stopped", reason)
         STOP.set()
 
+    caches = [d for d in (find_cache("tr"), find_cache("te")) if d]
+    if caches:
+        threading.Thread(target=prefetch, args=(caches,), daemon=True).start()
     set_phase("starting", "paketler kuruluyor")
 
     def heartbeat():  # yükleme sırasında da nabız: PWA eski nabzı "oturum öldü" sayar
