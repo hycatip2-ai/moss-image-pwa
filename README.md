@@ -25,10 +25,12 @@ PWA (GitHub Pages) ──"Başlat"──> GitHub Actions ──kaggle kernels pu
 3. **Gizli Gist**: gist.github.com → dosya adı `moss-status.json`, içerik `{}` → *Create secret gist*.
    Gist ID olarak adresin tamamı ya da sondaki uzun kod girilebilir.
 4. **Uygulama anahtarı (APP_TOKEN)**: uzun rastgele bir metin (ör. parola yöneticisiyle 32+ karakter).
-5. **Kaggle Secrets**: kaggle.com/code → `moss-servis` notebook'u → *Edit* → Add-ons → Secrets →
-   `APP_TOKEN`, `GH_TOKEN` (2. adımdaki token), `GIST_ID` ekle ve üçünü de bu notebook için aç.
-6. **GitHub repo secret'ı**: repo → Settings → Secrets and variables → Actions →
-   `KAGGLE_API_TOKEN` (kullanıcı adı workflow'da varsayılan: `hsnyld`; farklıysa `KAGGLE_USERNAME` ekle).
+5. **GitHub repo secret'ları**: repo → Settings → Secrets and variables → Actions → *New repository secret*:
+   `KAGGLE_API_TOKEN`, `APP_TOKEN`, `GH_TOKEN` (2. adımdaki token), `GIST_ID`.
+   Kaggle, API ile başlatılan notebook'a Kaggle Secrets vermediği için Başlat bu değerleri notebook'a kendisi gömer
+   (değerler sadece senin görebildiğin özel `moss-servis` notebook'unun kodunda durur).
+   Kullanıcı adı workflow'da varsayılan `hsnyld`; farklıysa `KAGGLE_USERNAME` de ekle.
+6. *(İsteğe bağlı)* Kaggle Secrets: `moss-servis` → Edit → Add-ons → Secrets. Varsa önce bunlar kullanılır.
 7. **GitHub Pages**: repo → Settings → Pages → Source: **GitHub Actions**. Adres:
    `https://<kullanıcı>.github.io/moss-image-pwa/`
 8. PWA'yı aç → ⚙️ Ayarlar → token, Gist ID, APP_TOKEN gir → Kaydet. Telefonda "Ana ekrana ekle".
@@ -49,7 +51,7 @@ Terminalden: `scripts/start.sh` (başlat), `GIST_ID=… scripts/status.sh` (duru
 | "Başlatılıyor…" 15 dk sürdü, sonra Kapalı | Kaggle'da GPU kotası bitmiş veya Secrets bağlı değil. kaggle.com/code/…/moss-servis logu |
 | "Hazır görünüyor ama ulaşılamadı" | APP_TOKEN PWA'da ve Kaggle'da aynı mı? Tünel yeniden kuruluyor olabilir, 1 dk bekle |
 | "en fazla 1048576 piksel" | T4 belleği 1024²'ye kadar yetiyor; listedeki boyutları kullan |
-| Gist'te durum yok | Secrets'ta GH_TOKEN / GIST_ID eksik ya da token'da Gists izni yok |
+| Gist'te durum yok / hep \"Başlatılıyor…\" | GitHub repo secret'larında GH_TOKEN / GIST_ID eksik ya da token'da Gists izni yok |
 
 ## Geliştirme
 

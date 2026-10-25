@@ -33,6 +33,10 @@ MAX_PIXELS = 1024 * 1024          # cuda:0 1024²'de 14.1/15 GB; daha büyüğü
 SIZE_RANGE = (256, 1536)
 KEEP_JOBS = 30
 GIST_FILE = "moss-status.json"
+SECRET_KEYS = ("APP_TOKEN", "GH_TOKEN", "GIST_ID")
+# Kaggle, API ile gönderilen notebook'lara Kaggle Secrets vermiyor. Bu durumda scripts/kaggle_push.sh
+# (GitHub Actions'ta repo secret'larından) değerleri buraya base64 JSON olarak gömer. Repoda hep boş kalır.
+INJECTED_SECRETS = ""
 CLOUDFLARED_URL = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
 
 T_START = time.time()
@@ -59,24 +63,32 @@ def timed(name, fn, *args, **kwargs):
 
 
 def get_secrets():
-    out = {}
+    """Sıra: Kaggle Secrets → derlemede gömülenler → ortam değişkenleri (yerel test)."""
+    out, sources = {}, {}
     try:
         from kaggle_secrets import UserSecretsClient
         client = UserSecretsClient()
-        for key in ("APP_TOKEN", "GH_TOKEN", "GIST_ID"):
+        for key in SECRET_KEYS:
             try:
-                out[key] = client.get_secret(key)
+                out[key], sources[key] = client.get_secret(key), "kaggle"
             except Exception:
                 pass
     except ImportError:
         pass
-    for key in ("APP_TOKEN", "GH_TOKEN", "GIST_ID"):  # yerel test için
-        out.setdefault(key, os.environ.get(key))
+    injected = {}
+    if INJECTED_SECRETS:
+        import base64
+        injected = json.loads(base64.b64decode(INJECTED_SECRETS).decode())
+    for key in SECRET_KEYS:
+        for source, value in (("injected", injected.get(key)), ("env", os.environ.get(key))):
+            if not (out.get(key) or "").strip() and value and value.strip():
+                out[key], sources[key] = value, source
     out = {k: v.strip() for k, v in out.items() if v and v.strip()}
     if "GIST_ID" in out:  # tam Gist adresi de olabilir: https://gist.github.com/<kullanıcı>/<id>
         ids = re.findall(r"[0-9a-fA-F]{20,}", out["GIST_ID"])
         if ids:
             out["GIST_ID"] = ids[-1].lower()
+    REPORT["secret_sources"] = {k: sources[k] for k in out}  # sadece kaynak adları, değerler değil
     return out
 
 
@@ -504,6 +516,8 @@ def main():
     app_token = sec.get("APP_TOKEN") or secrets.token_urlsafe(24)
     REPORT["mode"] = "self-test" if test_mode else "servis"
     REPORT["secrets"] = sorted(sec)  # sadece adlar
+    if "APP_TOKEN" in sec and not (sec.get("GH_TOKEN") and sec.get("GIST_ID")):
+        log("UYARI: GH_TOKEN/GIST_ID yok; durum Gist'e yazılamayacak, PWA servisi göremez")
     gist = Gist(sec.get("GH_TOKEN"), sec.get("GIST_ID"))
     engine = Engine()
     jobs = Jobs(engine)
